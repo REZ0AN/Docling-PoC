@@ -1,0 +1,6 @@
+# version Python 3.10.19
+python-dotenv
+docling
+google-genai
+psycopg2-binary
+pgvector
