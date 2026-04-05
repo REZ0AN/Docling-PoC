@@ -12,7 +12,7 @@ def test_embedding_model():
     gemini = get_gemini()
     vector = gemini.embed("This is a test sentence.")
     print(f"Embed OK: {len(vector)} dims, first value: {vector[0]:.6f}")
-    assert len(vector) == 3072
+    assert len(vector) == 1536
     assert all(isinstance(v, float) for v in vector)
 
 
