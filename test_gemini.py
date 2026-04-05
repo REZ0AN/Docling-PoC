@@ -1,5 +1,8 @@
-from clients import get_gemini
+import os
 
+from clients import get_gemini
+from dotenv import load_dotenv
+load_dotenv()
 
 def test_generative_model():
     gemini = get_gemini()
@@ -7,7 +10,7 @@ def test_generative_model():
     print(f"Generate OK: {response}")
     print(f"Usage: {usage}")
     assert isinstance(response, str) and len(response) > 0
-    assert usage["model"] == "gemma-4-26b-a4b-it"
+    assert usage["model"] == os.getenv("GEMINI_GEN_AI_MODEL")
     assert "input_tokens" in usage
     assert "output_tokens" in usage
 
