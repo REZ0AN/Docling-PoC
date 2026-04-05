@@ -23,20 +23,19 @@ class GeminiClient:
                 if cls._instance is None:  # double-checked locking
                     instance = super().__new__(cls)
                     instance.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-                    instance.model = os.environ['GEMINI_GEN_AI_MODEL']
-                    instance.embed_model = os.environ['GEMINI_EMBEDDING_MODEL']
+                    instance.model = os.environ["GEMINI_GEN_AI_MODEL"] 
+                    instance.embed_model = os.environ["GEMINI_EMBEDDING_MODEL"]  
                     cls._instance = instance
         return cls._instance
 
-    def generate(self, prompt: str, json_mode: bool = False) -> str:
+    def generate(self, prompt: str, json_mode: bool = False) -> tuple[str, dict]:
         """
         Generate text from a prompt.
-        Uses application/json response mode when json_mode=True,
-        which guarantees structured output without manual parsing.
+        Returns (text, usage) where usage = {input_tokens, output_tokens, model}.
+        Uses application/json response mode when json_mode=True (Gemini models only).
         """
         config = None
-        # Gemma models do not support JSON mode — prompt must enforce structure
-        if json_mode and not self.model.startswith("gemma"):
+        if json_mode:
             config = types.GenerateContentConfig(
                 response_mime_type="application/json"
             )
@@ -46,16 +45,21 @@ class GeminiClient:
                 contents=prompt,
                 config=config
             )
-            return response.text
+            usage = {
+                "input_tokens":  getattr(response.usage_metadata, "prompt_token_count", 0),
+                "output_tokens": getattr(response.usage_metadata, "candidates_token_count", 0),
+                "model": self.model
+            }
+            return response.text, usage
         except Exception as e:
             logger.error("Gemini generate failed: %s", e)
             raise
 
-    def embed(self, text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> list[float]:
+    def embed(self, text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> tuple[list[float], dict]:
         """
-        Embed a single string using text-embedding-004 (768 dims).
-        task_type should be RETRIEVAL_DOCUMENT for ingestion,
-        RETRIEVAL_QUERY for search.
+        Embed a single string using gemini-embedding-001 (1536 dims).
+        Returns (vector, usage) where usage = {input_tokens, output_tokens, model}.
+        task_type should be RETRIEVAL_DOCUMENT for ingestion, RETRIEVAL_QUERY for search.
         """
         try:
             result = self.client.models.embed_content(
@@ -69,7 +73,13 @@ class GeminiClient:
             assert len(result.embeddings) == 1, (
                 f"Expected 1 embedding, got {len(result.embeddings)}"
             )
-            return result.embeddings[0].values
+            values = [float(v) for v in result.embeddings[0].values]
+            usage = {
+                "input_tokens":  getattr(result, "metadata", None) and getattr(result.metadata, "billable_character_count", 0) or 0,
+                "output_tokens": 0,
+                "model": self.embed_model
+            }
+            return values, usage
         except Exception as e:
             logger.error("Gemini embed failed: %s", e)
             raise
