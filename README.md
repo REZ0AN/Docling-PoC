@@ -4,6 +4,7 @@
 
 This system ingests PDF, DOCX, and HTML documents into a vector database for semantic retrieval. Each document is parsed, chunked, enriched with LLM-generated metadata, embedded, and stored in NeonDB (PostgreSQL + pgvector). The pipeline is designed for offline batch ingestion with rate-limit-aware batching against the Gemini API.
 
+![workflow_diagram](images/data_ingestion_pipeline.png)
 ---
 
 ## Repository Layout
